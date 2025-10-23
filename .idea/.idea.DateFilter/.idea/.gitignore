@@ -11,3 +11,20 @@
 # Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+
+# Rider / Visual Studio
+.idea/
+.vs/
+
+# Publish artifacts outside docs
+**/publish/
+
+# OS cruft
+.DS_Store
+Thumbs.db

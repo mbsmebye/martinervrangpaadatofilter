@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.16"/>
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.16" PrivateAssets="all"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Update="wwwroot\combined.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+
+      <PropertyGroup>
+        <!-- Force restore to nuget.org only for THIS project; keeps solution root clean -->
+        <RestoreSources>https://api.nuget.org/v3/index.json</RestoreSources>
+        <RestoreAdditionalProjectSources></RestoreAdditionalProjectSources>
+        <RestoreFallbackFolders></RestoreFallbackFolders>
+      </PropertyGroup>
+
+</Project>

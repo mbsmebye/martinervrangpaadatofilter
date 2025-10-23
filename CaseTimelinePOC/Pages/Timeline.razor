@@ -1,0 +1,429 @@
+@page "/"
+@using System.Net.Http.Json
+@using System.Globalization
+@using Microsoft.JSInterop
+@using System.Linq
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+@if (!_loaded)
+{
+<div class="loading">Loading…</div>
+}
+else
+{
+<div class="coord">
+  <!-- Registration tint overlay aligned with packed case area -->
+  <div class="tint-reg@( _regEnabled ? "" : " off")"
+       style="@($"left:{LeftPadPx}px;width:calc(100% - {LeftPadPx + RightPadPx}px);bottom:{(3*SliderH) + TimelineH}px;height:{_rowCount * RowH}px")">
+    <div class="window" style="@($"left:{FromPctStr}%;width:{SelWidthPctStr}%")"></div>
+  </div>
+
+  <!-- Closed (completion) tint overlay -->
+  <div class="tint-closed@( _closedEnabled ? "" : " off")"
+       style="@($"left:{LeftPadPx}px;width:calc(100% - {LeftPadPx + RightPadPx}px);bottom:{(3*SliderH) + TimelineH}px;height:{_rowCount * RowH}px")">
+    <div class="window" style="@($"left:{FromClosedPctStr}%;width:{SelClosedWidthPctStr}%")"></div>
+  </div>
+
+  <!-- Active tint overlay -->
+  <div class="tint-active@( _activeEnabled ? "" : " off")"
+       style="@($"left:{LeftPadPx}px;width:calc(100% - {LeftPadPx + RightPadPx}px);bottom:{(3*SliderH) + TimelineH}px;height:{_rowCount * RowH}px")">
+    <div class="window" style="@($"left:{FromActivePctStr}%;width:{SelActiveWidthPctStr}%")"></div>
+  </div>
+
+  <!-- Case rows (packed bottom-up above the timeline + sliders) -->
+  @foreach (var item in _layout)
+  {
+    var c = item.Case;
+    var row = item.Row;
+    var bottom = (3*SliderH) + TimelineH + row * RowH;
+
+    var start = Clamp(c.RegistrationDate);
+    var end   = Clamp(c.CompletionDate ?? End);
+    if (end < start) (start, end) = (end, start);
+
+    var isMatch =
+      (!_regEnabled    || IsRegistrationMatch(c)) &&
+      (!_closedEnabled || IsCompletionMatch(c))  &&
+      (!_activeEnabled || IsActiveMatch(c));
+
+    <div class="row" style="@($"left:{LeftPadPx}px;width:calc(100% - {LeftPadPx + RightPadPx}px);height:{RowH}px;bottom:{bottom}px")">
+      <div class="bar @(isMatch ? "match" : null)" style="@($"left:{PctStr(start)}%;width:{WidthPctStr(start,end)}%")"></div>
+    </div>
+  }
+
+
+  <!-- Timeline row -->
+  <div class="row timeline" style="@($"left:{LeftPadPx}px;width:calc(100% - {LeftPadPx + RightPadPx}px);height:{TimelineH}px;bottom:{3*SliderH}px")">
+    <div class="axis"></div>
+    @for (int i = 0; i <= 5; i++)
+    {
+      var y = Start.AddYears(i);
+      var p = PctStr(y);
+      <div class="tick-year" style="@($"left:{p}%")"></div>
+      <div class="label" style="@($"left:calc({p}% - 10ch)")">@y.ToString("yyyy-MM-dd")</div>
+    }
+  </div>
+
+  <!-- Active slider (purple, topmost) -->
+  <div class="row slider-row @( _activeEnabled ? "" : "disabled")"
+       @ref="_sliderActiveRef"
+       style="@($"left:{LeftPadPx}px;width:calc(100% - {LeftPadPx + RightPadPx}px);height:{SliderH}px;bottom:{2*SliderH}px")"
+       @onpointermove="OnSliderMoveActive"
+       @onpointerup="EndDragActive"
+       @onpointerleave="EndDragActive">
+
+    <label class="toggle">
+      <input type="checkbox" @bind="_activeEnabled" />
+    </label>
+
+    <div class="slider-track"></div>
+    <div class="range-fill active" style="@($"left:{FromActivePctStr}%;width:{SelActiveWidthPctStr}%")"></div>
+
+    <div class="thumb" style="@($"left:{FromActivePctStr}%")" @onpointerdown="e => StartDragActiveAsync(true, e)"></div>
+    <div class="thumb" style="@($"left:{ToActivePctStr}%")"   @onpointerdown="e => StartDragActiveAsync(false, e)"></div>
+  </div>
+
+  <!-- Closed slider (red) -->
+  <div class="row slider-row @( _closedEnabled ? "" : "disabled")"
+       @ref="_sliderClosedRef"
+       style="@($"left:{LeftPadPx}px;width:calc(100% - {LeftPadPx + RightPadPx}px);height:{SliderH}px;bottom:{SliderH}px")"
+       @onpointermove="OnSliderMoveClosed"
+       @onpointerup="EndDragClosed"
+       @onpointerleave="EndDragClosed">
+
+    <label class="toggle">
+      <input type="checkbox" @bind="_closedEnabled" />
+    </label>
+
+    <div class="slider-track"></div>
+    <div class="range-fill closed" style="@($"left:{FromClosedPctStr}%;width:{SelClosedWidthPctStr}%")"></div>
+
+    <div class="thumb" style="@($"left:{FromClosedPctStr}%")" @onpointerdown="e => StartDragClosedAsync(true, e)"></div>
+    <div class="thumb" style="@($"left:{ToClosedPctStr}%")"   @onpointerdown="e => StartDragClosedAsync(false, e)"></div>
+  </div>
+
+  <!-- Registration slider (green, bottom) -->
+  <div class="row slider-row @( _regEnabled ? "" : "disabled")"
+       @ref="_sliderRef"
+       style="@($"left:{LeftPadPx}px;width:calc(100% - {LeftPadPx + RightPadPx}px);height:{SliderH}px;bottom:0")"
+       @onpointermove="OnSliderMove"
+       @onpointerup="EndDrag"
+       @onpointerleave="EndDrag">
+
+    <label class="toggle">
+      <input type="checkbox" @bind="_regEnabled" />
+    </label>
+
+    <div class="slider-track"></div>
+    <div class="range-fill reg" style="@($"left:{FromPctStr}%;width:{SelWidthPctStr}%")"></div>
+
+    <div class="thumb" style="@($"left:{FromPctStr}%")" @onpointerdown="e => StartDragAsync(true, e)"></div>
+    <div class="thumb" style="@($"left:{ToPctStr}%")"   @onpointerdown="e => StartDragAsync(false, e)"></div>
+  </div>
+</div>
+}
+
+@code {
+// Fixed window: 5 years ending 01.09.2025 (UTC)
+private static readonly DateTime Start = new(2020, 9, 1, 0, 0, 0, DateTimeKind.Utc);
+private static readonly DateTime End   = new(2025, 9, 1, 0, 0, 0, DateTimeKind.Utc);
+
+private List<CaseDto> _cases = new();
+private bool _loaded;
+
+// Layout
+private const int LeftPadPx = 80;
+private const int RightPadPx = 20;
+private const int RowH = 18;
+private const int TimelineH = 56;
+private const int SliderH = 40;
+
+// Toggles (default on)
+private bool _regEnabled = true;
+private bool _closedEnabled = true;
+private bool _activeEnabled = true;
+
+// Common slider domain (0..1000)
+private const int SliderMax = 1000;
+
+// Registration slider model
+private int _from = 0;
+private int _to = SliderMax;
+private string FromPctStr => ((_from * 100.0 / SliderMax).ToString("0.###", CultureInfo.InvariantCulture));
+private string ToPctStr   => ((_to   * 100.0 / SliderMax).ToString("0.###", CultureInfo.InvariantCulture));
+private string SelWidthPctStr => (((_to - _from) * 100.0 / SliderMax).ToString("0.###", CultureInfo.InvariantCulture));
+
+// Closed slider model
+private int _fromClosed = 0;
+private int _toClosed = SliderMax;
+private string FromClosedPctStr => ((_fromClosed * 100.0 / SliderMax).ToString("0.###", CultureInfo.InvariantCulture));
+private string ToClosedPctStr   => ((_toClosed   * 100.0 / SliderMax).ToString("0.###", CultureInfo.InvariantCulture));
+private string SelClosedWidthPctStr => (((_toClosed - _fromClosed) * 100.0 / SliderMax).ToString("0.###", CultureInfo.InvariantCulture));
+
+// Active slider model
+private int _fromActive = 0;
+private int _toActive = SliderMax;
+private string FromActivePctStr => ((_fromActive * 100.0 / SliderMax).ToString("0.###", CultureInfo.InvariantCulture));
+private string ToActivePctStr   => ((_toActive   * 100.0 / SliderMax).ToString("0.###", CultureInfo.InvariantCulture));
+private string SelActiveWidthPctStr => (((_toActive - _fromActive) * 100.0 / SliderMax).ToString("0.###", CultureInfo.InvariantCulture));
+
+// Drag state + geometry (registration)
+private ElementReference _sliderRef;
+private double _sliderLeft, _sliderWidth;
+private bool _dragFrom, _dragTo;
+
+// Drag state + geometry (closed)
+private ElementReference _sliderClosedRef;
+private double _sliderClosedLeft, _sliderClosedWidth;
+private bool _dragClosedFrom, _dragClosedTo;
+
+// Drag state + geometry (active)
+private ElementReference _sliderActiveRef;
+private double _sliderActiveLeft, _sliderActiveWidth;
+private bool _dragActiveFrom, _dragActiveTo;
+
+// Packed layout: which row each case is placed into
+private List<(CaseDto Case, int Row)> _layout = new();
+private int _rowCount = 0;
+
+protected override async Task OnInitializedAsync()
+{
+  try { _cases = await Http.GetFromJsonAsync<List<CaseDto>>("combined.json") ?? new(); }
+  finally { ComputePackedRows(); _loaded = true; }
+}
+
+// Greedy packing with ≥ 6 months gap between bars in the same row
+private void ComputePackedRows()
+{
+  _layout.Clear();
+  var rowsLastEnd = new List<DateTime>(); // last end per row (clamped to timeline)
+  foreach (var c in _cases.OrderBy(x => x.RegistrationDate))
+  {
+    var s = Clamp(c.RegistrationDate);
+    var e = Clamp(c.CompletionDate ?? End);
+    if (e < s) (s, e) = (e, s);
+
+    var placed = -1;
+    for (int r = 0; r < rowsLastEnd.Count; r++)
+    {
+      // need at least 6 months gap from the last bar in this row
+      if (s >= rowsLastEnd[r].AddMonths(1))
+      {
+        placed = r;
+        rowsLastEnd[r] = e;
+        break;
+      }
+    }
+    if (placed == -1)
+    {
+      placed = rowsLastEnd.Count;
+      rowsLastEnd.Add(e);
+    }
+    _layout.Add((c, placed));
+  }
+  _rowCount = rowsLastEnd.Count;
+}
+
+
+// Mapping slider value -> date
+private DateTime SliderToDate(int v)
+{
+  var spanTicks = (End - Start).Ticks;
+  var valTicks = (long)Math.Round(spanTicks * (v / (double)SliderMax));
+  return new DateTime(Start.Ticks + valTicks, DateTimeKind.Utc);
+}
+
+// Filter checks
+private bool IsRegistrationMatch(CaseDto c)
+{
+  var fromDate = SliderToDate(_from);
+  var toDate = SliderToDate(_to);
+  return c.RegistrationDate >= fromDate && c.RegistrationDate <= toDate;
+}
+private bool IsCompletionMatch(CaseDto c)
+{
+  if (!c.CompletionDate.HasValue) return false;
+  var fromDate = SliderToDate(_fromClosed);
+  var toDate = SliderToDate(_toClosed);
+  var comp = c.CompletionDate.Value;
+  return comp >= fromDate && comp <= toDate;
+}
+private bool IsActiveMatch(CaseDto c)
+{
+  var filterStart = SliderToDate(_fromActive);
+  var filterEnd   = SliderToDate(_toActive);
+  var startDate = c.RegistrationDate;
+  var endDate   = c.CompletionDate ?? End;
+  return startDate <= filterEnd && endDate >= filterStart; // interval overlap
+}
+
+// Geometry helpers (registration)
+private async Task EnsureSliderRectAsync()
+{
+  var rect = await JS.InvokeAsync<DomRect>("getSliderRect", _sliderRef);
+  _sliderLeft = rect.Left;
+  _sliderWidth = rect.Width <= 0 ? 1 : rect.Width;
+}
+private async Task StartDragAsync(bool fromHandle, PointerEventArgs e)
+{
+  await EnsureSliderRectAsync();
+  await JS.InvokeVoidAsync("capturePointer", _sliderRef, e.PointerId);
+  var p = PctFromPointer(e, _sliderLeft, _sliderWidth);
+  if (fromHandle) { _dragFrom = true; _from = PctToValue(p); if (_from > _to) _to = _from; }
+  else            { _dragTo   = true; _to   = PctToValue(p); if (_to   < _from) _from = _to; }
+  StateHasChanged();
+}
+private void OnSliderMove(PointerEventArgs e)
+{
+  if (!_dragFrom && !_dragTo) return;
+  var p = PctFromPointer(e, _sliderLeft, _sliderWidth);
+  if (_dragFrom) { _from = PctToValue(p); if (_from > _to) _to = _from; }
+  else           { _to   = PctToValue(p); if (_to   < _from) _from = _to; }
+  StateHasChanged();
+}
+private void EndDrag() { _dragFrom = _dragTo = false; }
+
+// Geometry helpers (closed)
+private async Task EnsureSliderClosedRectAsync()
+{
+  var rect = await JS.InvokeAsync<DomRect>("getSliderRect", _sliderClosedRef);
+  _sliderClosedLeft = rect.Left;
+  _sliderClosedWidth = rect.Width <= 0 ? 1 : rect.Width;
+}
+private async Task StartDragClosedAsync(bool fromHandle, PointerEventArgs e)
+{
+  await EnsureSliderClosedRectAsync();
+  await JS.InvokeVoidAsync("capturePointer", _sliderClosedRef, e.PointerId);
+  var p = PctFromPointer(e, _sliderClosedLeft, _sliderClosedWidth);
+  if (fromHandle) { _dragClosedFrom = true; _fromClosed = PctToValue(p); if (_fromClosed > _toClosed) _toClosed = _fromClosed; }
+  else            { _dragClosedTo   = true; _toClosed   = PctToValue(p); if (_toClosed   < _fromClosed) _fromClosed = _toClosed; }
+  StateHasChanged();
+}
+private void OnSliderMoveClosed(PointerEventArgs e)
+{
+  if (!_dragClosedFrom && !_dragClosedTo) return;
+  var p = PctFromPointer(e, _sliderClosedLeft, _sliderClosedWidth);
+  if (_dragClosedFrom) { _fromClosed = PctToValue(p); if (_fromClosed > _toClosed) _toClosed = _fromClosed; }
+  else                 { _toClosed   = PctToValue(p); if (_toClosed   < _fromClosed) _fromClosed = _toClosed; }
+  StateHasChanged();
+}
+private void EndDragClosed() { _dragClosedFrom = _dragClosedTo = false; }
+
+// Geometry helpers (active)
+private async Task EnsureSliderActiveRectAsync()
+{
+  var rect = await JS.InvokeAsync<DomRect>("getSliderRect", _sliderActiveRef);
+  _sliderActiveLeft = rect.Left;
+  _sliderActiveWidth = rect.Width <= 0 ? 1 : rect.Width;
+}
+private async Task StartDragActiveAsync(bool fromHandle, PointerEventArgs e)
+{
+  await EnsureSliderActiveRectAsync();
+  await JS.InvokeVoidAsync("capturePointer", _sliderActiveRef, e.PointerId);
+  var p = PctFromPointer(e, _sliderActiveLeft, _sliderActiveWidth);
+  if (fromHandle) { _dragActiveFrom = true; _fromActive = PctToValue(p); if (_fromActive > _toActive) _toActive = _fromActive; }
+  else            { _dragActiveTo   = true; _toActive   = PctToValue(p); if (_toActive   < _fromActive) _fromActive = _toActive; }
+  StateHasChanged();
+}
+private void OnSliderMoveActive(PointerEventArgs e)
+{
+  if (!_dragActiveFrom && !_dragActiveTo) return;
+  var p = PctFromPointer(e, _sliderActiveLeft, _sliderActiveWidth);
+  if (_dragActiveFrom) { _fromActive = PctToValue(p); if (_fromActive > _toActive) _toActive = _fromActive; }
+  else                 { _toActive   = PctToValue(p); if (_toActive   < _fromActive) _fromActive = _toActive; }
+  StateHasChanged();
+}
+private void EndDragActive() { _dragActiveFrom = _dragActiveTo = false; }
+
+// Shared pointer → percent
+private static double PctFromPointer(PointerEventArgs e, double leftPx, double widthPx)
+{
+  if (widthPx <= 0) return 0;
+  var x = e.ClientX - leftPx;
+  var p = x / widthPx;
+  if (p < 0) p = 0; if (p > 1) p = 1;
+  return p * 100.0;
+}
+private static int PctToValue(double pct) =>
+  (int)Math.Round(Math.Clamp(pct, 0, 100) / 100.0 * SliderMax);
+
+// Date → % mapping
+private static double Pct(DateTime d)
+{
+  var c = Clamp(d);
+  var p = (c.Ticks - Start.Ticks) / (double)(End.Ticks - Start.Ticks);
+  return p * 100.0;
+}
+private static double WidthPct(DateTime a, DateTime b) => Math.Max(0, Pct(b) - Pct(a));
+private static string PctStr(DateTime d) => Pct(d).ToString("0.###", CultureInfo.InvariantCulture);
+private static string WidthPctStr(DateTime a, DateTime b) => WidthPct(a,b).ToString("0.###", CultureInfo.InvariantCulture);
+private static DateTime Clamp(DateTime d) => d < Start ? Start : d > End ? End : d;
+
+public sealed class CaseDto
+{
+  public string Id { get; init; } = "";
+  public string? Title { get; init; }
+  public DateTime RegistrationDate { get; init; }
+  public DateTime? CompletionDate { get; init; }
+}
+
+// JS interop DTO
+public sealed class DomRect { public double Left { get; set; } public double Width { get; set; } }
+}
+
+<style>
+  :root { font-family: system-ui, Segoe UI, Arial, sans-serif; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
+  .loading { height: 100vh; display:flex; align-items:center; justify-content:center; color:#666; }
+
+  .coord { position: relative; width: 98vw; height: 100vh; background: #fff; overflow: visible; }
+
+  /* Tints behind bars */
+  .tint-reg, .tint-closed, .tint-active { position: absolute; z-index: 0; pointer-events: none; margin-left: -0.75rem; }
+  .tint-reg .window    { position: absolute; top: 0; height: 100%; background: rgba(0, 160, 0, 0.08); }
+  .tint-closed .window { position: absolute; top: 0; height: 100%; background: rgba(220, 0, 0, 0.08); }
+  .tint-active .window { position: absolute; top: 0; height: 100%; background: rgba(128, 0, 255, 0.08); }
+  .tint-reg.off .window,
+  .tint-closed.off .window,
+  .tint-active.off .window { display: none; }
+
+  /* Case rows */
+  .row { position: absolute; left: 0; z-index: 1; }
+  .bar { position: absolute; top: 5px; height: 8px; background: #9aa0ad; border-radius: 4px; }
+  .bar.match { background: #1e88ff; }
+
+  /* Timeline */
+  .timeline { position: absolute; z-index: 2; background:#fafafa; border-top:1px solid #e6e6e6; overflow: visible; }
+  .timeline .axis { position: absolute; left: 0; right: 0; top: 22px; height: 1px; background: #bbb; }
+  .tick-year { position: absolute; top: 6px; height: 16px; width: 0; border-left: 1px solid #888; pointer-events: none; }
+  .label { position: absolute; top: 34px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; width: 20ch; text-align: center; white-space: nowrap; font-size: 12px; color: #444; user-select: none; }
+
+  /* Slider rows */
+  .slider-row { position: absolute; z-index: 3; background:#f6f7f9; border-top:1px solid #e6e6e6; }
+  .slider-track { position: absolute; left: 0; right: 0; top: 50%; height: 6px; background:#e2e2e2; transform: translateY(-50%); border-radius: 3px; }
+  .range-fill { position: absolute; top: 50%; height: 6px; transform: translateY(-50%); border-radius: 3px; pointer-events: none; }
+  .range-fill.reg    { background: rgba(0, 160, 0, 0.28); }
+  .range-fill.closed { background: rgba(220, 0, 0, 0.28); }
+  .range-fill.active { background: rgba(128, 0, 255, 0.28); }
+
+  .thumb {
+    position: absolute; top: 50%; transform: translate(-50%, -50%);
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #1e88ff; border: 2px solid #fff; box-shadow: 0 0 0 2px #1e88ff;
+    cursor: pointer; touch-action: none; z-index: 4; padding: 0;
+  }
+
+  /* Toggle just left of each slider */
+  .toggle {
+    position: absolute; left: -64px; top: 50%; transform: translateY(-50%);
+    display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #222;
+    user-select: none; pointer-events: auto;  /* stays clickable even if row disabled */
+  }
+  .toggle input { width: 14px; height: 14px; accent-color: #1e88ff; }
+
+  /* Disabled slider: dim and ignore drag, but keep toggle clickable */
+  .slider-row.disabled { opacity: .4; }
+  .slider-row.disabled .thumb,
+  .slider-row.disabled .slider-track { pointer-events: none; }
+</style>

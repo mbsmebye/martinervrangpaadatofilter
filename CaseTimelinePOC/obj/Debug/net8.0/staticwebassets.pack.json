@@ -1,0 +1,61 @@
+{
+  "Files": [
+    {
+      "Id": "C:\\Users\\131802masm\\Code\\DateFilter\\CaseTimelinePOC\\bin\\Debug\\net8.0\\wwwroot\\_framework\\blazor.webassembly.js",
+      "PackagePath": "staticwebassets\\_framework\\blazor.webassembly.js"
+    },
+    {
+      "Id": "C:\\Users\\131802masm\\Code\\DateFilter\\CaseTimelinePOC\\obj\\Debug\\net8.0\\compressed\\j1qk7j5x8c.gz",
+      "PackagePath": "staticwebassets\\_framework\\blazor.webassembly.js.gz"
+    },
+    {
+      "Id": "C:\\Users\\131802masm\\Code\\DateFilter\\CaseTimelinePOC\\wwwroot\\cases.json",
+      "PackagePath": "staticwebassets\\cases.json"
+    },
+    {
+      "Id": "C:\\Users\\131802masm\\Code\\DateFilter\\CaseTimelinePOC\\wwwroot\\combined.json",
+      "PackagePath": "staticwebassets\\combined.json"
+    },
+    {
+      "Id": "C:\\Users\\131802masm\\Code\\DateFilter\\CaseTimelinePOC\\wwwroot\\css\\app.css",
+      "PackagePath": "staticwebassets\\css\\app.css"
+    },
+    {
+      "Id": "C:\\Users\\131802masm\\Code\\DateFilter\\CaseTimelinePOC\\wwwroot\\css\\bootstrap\\bootstrap.min.css",
+      "PackagePath": "staticwebassets\\css\\bootstrap\\bootstrap.min.css"
+    },
+    {
+      "Id": "C:\\Users\\131802masm\\Code\\DateFilter\\CaseTimelinePOC\\wwwroot\\css\\bootstrap\\bootstrap.min.css.map",
+      "PackagePath": "staticwebassets\\css\\bootstrap\\bootstrap.min.css.map"
+    },
+    {
+      "Id": "C:\\Users\\131802masm\\Code\\DateFilter\\CaseTimelinePOC\\wwwroot\\favicon.png",
+      "PackagePath": "staticwebassets\\favicon.png"
+    },
+    {
+      "Id": "C:\\Users\\131802masm\\Code\\DateFilter\\CaseTimelinePOC\\wwwroot\\icon-192.png",
+      "PackagePath": "staticwebassets\\icon-192.png"
+    },
+    {
+      "Id": "C:\\Users\\131802masm\\Code\\DateFilter\\CaseTimelinePOC\\wwwroot\\index.html",
+      "PackagePath": "staticwebassets\\index.html"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.CaseTimelinePOC.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.build.CaseTimelinePOC.props",
+      "PackagePath": "build\\CaseTimelinePOC.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildMultiTargeting.CaseTimelinePOC.props",
+      "PackagePath": "buildMultiTargeting\\CaseTimelinePOC.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildTransitive.CaseTimelinePOC.props",
+      "PackagePath": "buildTransitive\\CaseTimelinePOC.props"
+    }
+  ],
+  "ElementsToRemove": []
+}

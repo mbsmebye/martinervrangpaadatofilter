@@ -1,0 +1,32 @@
+/* /Layout/MainLayout.razor.rz.scp.css */
+.app-container[b-r0rxb22imp] {
+    padding: 20px;
+    width: 100%;
+    min-height: 100vh;
+    background: #ffffff;
+    }
+
+    .sidebar[b-r0rxb22imp] {
+        width: 250px;
+        height: 100vh;
+        position: sticky;
+        top: 0;
+    }
+
+    .top-row[b-r0rxb22imp] {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .top-row.auth[b-r0rxb22imp]  a:first-child {
+        flex: 1;
+        text-align: right;
+        width: 0;
+    }
+
+    .top-row[b-r0rxb22imp], article[b-r0rxb22imp] {
+        padding-left: 2rem !important;
+        padding-right: 1.5rem !important;
+    }
+}

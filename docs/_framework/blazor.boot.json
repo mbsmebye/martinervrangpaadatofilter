@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "CaseTimelinePOC",
   "resources": {
-    "hash": "sha256-6hzIyVavBugCdwbaP6vpIQ9o3zEf3z3NUFxreFbWoKY=",
+    "hash": "sha256-ioOh15vK/uF+gXCW8R4I5YIMpxPOGOLblnM/894RdI8=",
     "jsModuleNative": {
       "dotnet.native.8.0.16.is9hmjk84g.js": "sha256-RiGT44TFZmHOY+Oqvb8o8r+BJVWex6+dPxFxrOiWvFY="
     },
@@ -17,7 +17,7 @@
       "icudt_no_CJK.dat": "sha256-L7sV7NEYP37/Qr2FPCePo5cJqRgTXRwGHuwF5Q+0Nfs="
     },
     "assembly": {
-      "CaseTimelinePOC.wasm": "sha256-+5SIUwHmqzHB1GCDFJtkV8YnlIIGszQIpnJ5DST2mKE=",
+      "CaseTimelinePOC.wasm": "sha256-mKVfO1xYP6TvakUhardNGZQdCNoioxR3eQjnAmWYJXE=",
       "Microsoft.AspNetCore.Components.wasm": "sha256-kKB5aplWzcrytY6SDXK8+LEkkaYJ0JNEDNfKNaEraHg=",
       "Microsoft.AspNetCore.Components.Web.wasm": "sha256-xAxN2LmTjy9P8cYoLKsImvin21Oee7pAhucen1q8wbs=",
       "Microsoft.AspNetCore.Components.WebAssembly.wasm": "sha256-FkD80HgagXKsQ+0yInJ2522BYaR2CdASW6dUwSFyB64=",

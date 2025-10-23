@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CaseTimelinePOC")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+81f5c1f732506ef3fee3792966a2b415df860989")]
 [assembly: System.Reflection.AssemblyProductAttribute("CaseTimelinePOC")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CaseTimelinePOC")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
